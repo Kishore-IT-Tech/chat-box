@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Accident AI Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080c10;--sur:#0d1117;--card:#111820;--bdr:#1e2d3d;
+  --acc:#00d4ff;--red:#ff3b5c;--grn:#00e676;--yel:#ffaa00;
+  --txt:#e8f4fd;--mut:#4a6fa5;
+  --f:'Syne',sans-serif;--m:'Space Mono',monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--f);overflow:hidden}
+.app{display:grid;grid-template-columns:1fr 360px;height:100vh}
+
+/* LEFT */
+.L{display:flex;flex-direction:column;align-items:center;gap:18px;padding:24px;border-right:1px solid var(--bdr);overflow:hidden;position:relative}
+.L::before{content:'';position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:500px;height:500px;background:radial-gradient(circle,rgba(0,212,255,.05) 0%,transparent 70%);pointer-events:none}
+.hdr{display:flex;align-items:center;justify-content:space-between;width:100%;z-index:1}
+.logo{font-size:12px;font-family:var(--m);color:var(--mut);letter-spacing:3px}
+.logo b{color:var(--acc)}
+.badge{display:flex;align-items:center;gap:6px;font-family:var(--m);font-size:11px;padding:5px 14px;border-radius:20px}
+.badge.on{color:var(--grn);background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2)}
+.bdot{width:6px;height:6px;border-radius:50%;animation:blink 1.5s infinite}
+.badge.on .bdot{background:var(--grn)}
+
+/* ORB */
+.orb-wrap{position:relative;width:200px;height:200px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(0,212,255,.1);animation:spin 10s linear infinite}
+.ring.r1{width:200px;height:200px}
+.ring.r2{width:160px;height:160px;animation-direction:reverse;animation-duration:7s}
+.orb{width:130px;height:130px;border-radius:50%;background:linear-gradient(145deg,#0d1a24,#080e14);border:2px solid rgba(0,212,255,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .4s;z-index:2}
+.orb.idle{border-color:rgba(0,212,255,.15)}
+.orb.listening{border-color:var(--acc);box-shadow:0 0 50px rgba(0,212,255,.3);animation:breathe 1.5s ease-in-out infinite}
+.orb.speaking{border-color:var(--yel);box-shadow:0 0 50px rgba(255,170,0,.3)}
+.orb.emergency{border-color:var(--red);box-shadow:0 0 60px rgba(255,59,92,.5);animation:dpulse .6s ease-in-out infinite alternate}
+.eyes{display:flex;gap:16px;margin-bottom:10px}
+.eye{width:10px;height:10px;border-radius:50%;transition:all .3s}
+.orb.idle .eye{background:var(--mut)}
+.orb.listening .eye{background:var(--acc);animation:epulse 1s ease-in-out infinite}
+.orb.speaking .eye{background:var(--yel);animation:eblink .7s ease-in-out infinite alternate}
+.orb.emergency .eye{background:var(--red);animation:eblink .3s ease-in-out infinite alternate}
+.mouth{width:22px;height:3px;border-radius:2px;transition:all .4s}
+.orb.idle .mouth{background:var(--mut)}
+.orb.listening .mouth{background:var(--acc)}
+.orb.speaking .mouth{background:var(--yel);height:8px;border-radius:0 0 8px 8px}
+.orb.emergency .mouth{background:var(--red)}
+
+/* STATUS ROW */
+.srow{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
+.slabel{font-family:var(--m);font-size:10px;letter-spacing:3px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.sdot{width:5px;height:5px;border-radius:50%}
+.slabel.idle{color:var(--mut)} .slabel.idle .sdot{background:var(--mut)}
+.slabel.listening{color:var(--acc)} .slabel.listening .sdot{background:var(--acc);animation:blink .8s infinite}
+.slabel.speaking{color:var(--yel)} .slabel.speaking .sdot{background:var(--yel)}
+.slabel.emergency{color:var(--red)} .slabel.emergency .sdot{background:var(--red);animation:blink .4s infinite}
+
+.wave{display:flex;gap:3px;align-items:center;height:20px}
+.wave span{width:3px;border-radius:2px;height:4px;transition:height .1s}
+.wave.idle span{background:var(--mut)}
+.wave.listening span{background:var(--acc);animation:wv .7s ease-in-out infinite}
+.wave.speaking span{background:var(--yel);animation:wv .4s ease-in-out infinite}
+.wave.emergency span{background:var(--red);animation:wv .3s ease-in-out infinite}
+.wave span:nth-child(2){animation-delay:.1s}
+.wave span:nth-child(3){animation-delay:.2s}
+.wave span:nth-child(4){animation-delay:.3s}
+.wave span:nth-child(5){animation-delay:.4s}
+
+.tbox{width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:10px 14px;font-family:var(--m);font-size:11px;color:var(--acc);min-height:38px;letter-spacing:.5px;transition:all .3s}
+.tbox.speaking{color:var(--yel);border-color:rgba(255,170,0,.25)}
+.tbox.emergency{color:var(--red);border-color:rgba(255,59,92,.3)}
+
+/* MIC BTN */
+.mic-btn{width:100%;padding:14px;border-radius:12px;border:2px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);cursor:pointer;font-family:var(--f);font-size:15px;font-weight:800;color:var(--acc);letter-spacing:2px;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px}
+.mic-btn:hover{border-color:var(--acc);background:rgba(0,212,255,.12)}
+.mic-btn.on{border-color:var(--acc);background:rgba(0,212,255,.1);color:var(--acc)}
+.mic-btn.on:hover{border-color:var(--red);background:rgba(255,59,92,.08);color:var(--red)}
+
+/* QUICK ACTIONS */
+.qa-lbl{font-family:var(--m);font-size:10px;color:var(--mut);letter-spacing:2px;text-transform:uppercase;align-self:flex-start}
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.qa{padding:12px 14px;border-radius:10px;border:1px solid;background:transparent;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;transition:all .2s;width:100%}
+.qa:hover{transform:translateY(-2px)} .qa:active{transform:scale(.97)}
+.qa.r{border-color:rgba(255,59,92,.3);color:var(--red)} .qa.r:hover{background:rgba(255,59,92,.08)}
+.qa.g{border-color:rgba(0,230,118,.3);color:var(--grn)} .qa.g:hover{background:rgba(0,230,118,.08)}
+.qa.b{border-color:rgba(0,212,255,.3);color:var(--acc)} .qa.b:hover{background:rgba(0,212,255,.08)}
+.qa.y{border-color:rgba(255,170,0,.3);color:var(--yel)} .qa.y:hover{background:rgba(255,170,0,.08)}
+
+.loc{font-family:var(--m);font-size:10px;color:var(--mut);display:flex;align-items:flex-start;gap:6px;width:100%}
+
+/* RIGHT */
+.R{display:flex;flex-direction:column;height:100vh;background:var(--sur)}
+.rtop{padding:16px 20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.rtitle{font-family:var(--m);font-size:11px;color:var(--mut);letter-spacing:2px;text-transform:uppercase}
+.minfo{font-family:var(--m);font-size:10px;padding:4px 10px;border-radius:12px;border:1px solid;color:var(--mut);border-color:var(--bdr)}
+.minfo.on{color:var(--acc);border-color:rgba(0,212,255,.3);animation:blink 2s infinite}
+.msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msgs::-webkit-scrollbar{width:3px}
+.msgs::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
+.msg{display:flex;flex-direction:column;max-width:93%;animation:si .2s ease}
+.msg.u{align-self:flex-end;align-items:flex-end}
+.msg.b{align-self:flex-start;align-items:flex-start}
+.mwho{font-family:var(--m);font-size:9px;color:var(--mut);letter-spacing:1px;margin-bottom:3px;text-transform:uppercase}
+.mbub{padding:9px 13px;border-radius:11px;font-size:13px;line-height:1.55}
+.msg.u .mbub{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-bottom-right-radius:3px}
+.msg.b .mbub{background:var(--card);border:1px solid var(--bdr);border-bottom-left-radius:3px}
+.msg.b.em .mbub{background:rgba(255,59,92,.08);border-color:rgba(255,59,92,.25);color:#ff8099}
+.msg.b.ok .mbub{background:rgba(0,230,118,.07);border-color:rgba(0,230,118,.2);color:var(--grn);font-family:var(--m);font-size:11px}
+.msg.b.sy .mbub{background:rgba(255,170,0,.07);border-color:rgba(255,170,0,.2);color:var(--yel);font-family:var(--m);font-size:11px}
+.mt{font-family:var(--m);font-size:9px;color:var(--mut);margin-top:3px}
+.irow{padding:12px 14px;border-top:1px solid var(--bdr);display:flex;gap:8px;align-items:center}
+.inp{flex:1;background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:10px 14px;font-family:var(--f);font-size:13px;color:var(--txt);outline:none}
+.inp::placeholder{color:var(--mut)} .inp:focus{border-color:rgba(0,212,255,.3)}
+.sbtn{width:40px;height:40px;border-radius:10px;border:1px solid rgba(0,212,255,.4);background:rgba(0,212,255,.08);color:var(--acc);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sbtn:hover{background:rgba(0,212,255,.2)}
+
+/* FLASH */
+.flash{display:none;position:fixed;inset:0;background:rgba(255,59,92,.05);pointer-events:none;z-index:99;animation:dpulse .6s ease-in-out infinite alternate}
+.flash.on{display:block}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes dpulse{from{box-shadow:0 0 40px rgba(255,59,92,.3)}to{box-shadow:0 0 80px rgba(255,59,92,.6)}}
+@keyframes epulse{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+@keyframes eblink{from{transform:scaleY(1)}to{transform:scaleY(.1)}}
+@keyframes wv{0%,100%{height:4px}50%{height:16px}}
+@keyframes si{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="flash" id="flash"></div>
+<div class="app">
+<div class="L">
+  <div class="hdr">
+    <div class="logo">SMART <b>ACCIDENT</b> SYSTEM</div>
+    <div class="badge on"><div class="bdot"></div>ONLINE</div>
+  </div>
+
+  <div class="orb-wrap">
+    <div class="ring r1"></div><div class="ring r2"></div>
+    <div class="orb idle" id="orb">
+      <div class="eyes"><div class="eye"></div><div class="eye"></div></div>
+      <div class="mouth"></div>
+    </div>
+  </div>
+
+  <div class="srow">
+    <div class="slabel idle" id="slabel"><div class="sdot"></div><span id="stxt">STANDBY</span></div>
+    <div class="wave idle" id="wave"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="tbox" id="tbox">Click START LISTENING and speak clearly into your mic.</div>
+  </div>
+
+  <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤 &nbsp; START LISTENING</button>
+
+  <div class="qa-lbl">Quick Actions</div>
+  <div class="qa-grid">
+    <button class="qa r" onclick="act('emergency')">🚨 Emergency 108</button>
+    <button class="qa g" onclick="act('cancel')">✅ Cancel Alert</button>
+    <button class="qa b" onclick="act('location')">📍 My Location</button>
+    <button class="qa y" onclick="act('injured')">🤕 I'm Injured</button>
+  </div>
+
+  <div class="loc">📍 <span id="locTxt">Detecting your location...</span></div>
+</div>
+
+<div class="R">
+  <div class="rtop">
+    <div class="rtitle">Conversation Log</div>
+    <div class="minfo" id="minfo">MIC OFF</div>
+  </div>
+  <div class="msgs" id="msgs"></div>
+  <div class="irow">
+    <input class="inp" id="inp" placeholder="Type here or use voice..." onkeydown="if(event.key==='Enter')sendTyped()">
+    <button class="sbtn" onclick="sendTyped()">▶</button>
+  </div>
+</div>
+</div>
+
+<script>
+const GROQ_KEY = "";  // Add your Groq API key here
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+let micOn=false, speaking=false, emergency=false;
+let recog=null, restartT=null, autoCallT=null;
+let locStr="Chennai, Tamil Nadu, India";
+let mVoice=null, voicesLoaded=false;
+
+// ── RESPONSES ──
+const INJ=[
+  {t:"⚠️ Injury reported. Do NOT move — especially your head and neck. Keep pressure on any wounds to stop bleeding. Help is on the way.",s:"Injury reported. Do not move, especially your head and neck. Keep pressure on any wounds. Help is on the way right now."},
+  {t:"⚠️ Stay conscious. Breathe slowly. If you smell fuel, carefully move away from the vehicle. Ambulance dispatched to your location.",s:"Stay conscious and breathe slowly. If you smell fuel, carefully move away. Ambulance has been dispatched to your exact location."},
+  {t:"⚠️ Do not remove any objects stuck in a wound. Keep yourself warm. Emergency services have been notified with your GPS position.",s:"Do not remove any objects stuck in a wound. Keep yourself warm. Emergency services have been notified with your GPS position."},
+  {t:"⚠️ Try to honk your horn or turn on hazard lights to signal other vehicles. Emergency services are already on their way to you.",s:"If you can, honk your horn or turn on hazard lights to signal passing vehicles. Emergency services are already on their way."}
+];
+const CAN=["✅ Alert cancelled. System back to standby. No emergency services contacted. Stay safe.","✅ False alarm confirmed. Emergency call aborted. System resuming normal monitoring.","✅ Emergency mode deactivated. All alerts stopped. Drive safely.","✅ Understood. Alert stopped. System continues monitoring your journey."];
+const LOC=["📍 Your location: LOC — sent to emergency dispatch.","📍 Position confirmed: LOC — responders can navigate here directly.","📍 Location transmitted: LOC — stay here until help arrives.","📍 GPS locked at: LOC — nearest unit has been notified."];
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+
+// ── VOICES ──
+function loadVoices(){
+  const all=window.speechSynthesis.getVoices();
+  if(!all.length) return;
+  voicesLoaded=true;
+  const tries=[
+    v=>v.name==="Microsoft David - English (United States)",
+    v=>v.name.includes("David"),
+    v=>v.name==="Google UK English Male",
+    v=>v.name.includes("Male")&&v.lang.startsWith("en"),
+    v=>v.lang==="en-GB"&&!v.name.toLowerCase().match(/female|zira|hazel|susan/),
+    v=>v.lang.startsWith("en")&&!v.name.toLowerCase().match(/female|zira|hazel|susan|samantha|victoria|karen/),
+    v=>v.lang.startsWith("en")
+  ];
+  for(let fn of tries){ let f=all.find(fn); if(f){mVoice=f;break;} }
+}
+window.speechSynthesis.onvoiceschanged=loadVoices;
+setTimeout(loadVoices,200);
+setTimeout(loadVoices,800);
+setTimeout(loadVoices,2000);
+
+// ── SPEAK ──
+function speak(txt,cb){
+  window.speechSynthesis.cancel();
+  speaking=true; setState("speaking");
+  const u=new SpeechSynthesisUtterance(txt);
+  u.rate=0.87; u.pitch=0.6; u.volume=1.0;
+  if(mVoice) u.voice=mVoice;
+  // Chrome bug: long text stops — keep alive
+  let alive=setInterval(()=>{
+    if(!window.speechSynthesis.speaking){clearInterval(alive);return;}
+    window.speechSynthesis.pause();
+    window.speechSynthesis.resume();
+  },8000);
+  u.onend=()=>{clearInterval(alive);speaking=false;restoreState();if(cb)cb();};
+  u.onerror=()=>{clearInterval(alive);speaking=false;restoreState();if(cb)cb();};
+  window.speechSynthesis.speak(u);
+  document.getElementById("tbox").className="tbox speaking";
+  document.getElementById("tbox").textContent="Speaking: "+txt.substring(0,60)+(txt.length>60?"...":"");
+}
+
+function restoreState(){
+  if(emergency) setState("emergency");
+  else if(micOn) setState("listening");
+  else setState("idle");
+  document.getElementById("tbox").className="tbox"+(emergency?" emergency":"");
+}
+
+// ── ORB STATE ──
+function setState(s){
+  document.getElementById("orb").className="orb "+s;
+  document.getElementById("slabel").className="slabel "+s;
+  document.getElementById("wave").className="wave "+s;
+  const lbl={idle:"STANDBY",listening:"LISTENING",speaking:"SPEAKING",emergency:"EMERGENCY"};
+  document.getElementById("stxt").textContent=lbl[s]||"STANDBY";
+}
+
+// ── MIC ──
+function toggleMic(){
+  if(micOn) stopMic();
+  else startMic();
+}
+
+function startMic(){
+  // Must happen inside user click — Chrome requires it
+  if(!("webkitSpeechRecognition" in window||"SpeechRecognition" in window)){
+    addMsg("b","❌ Use Google Chrome browser for voice to work!","sy");
+    speak("Please open this page in Google Chrome for voice recognition to work.");
+    return;
+  }
+  
+  // Request microphone permission explicitly
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream=>{
+      // Permission granted — stop the stream and proceed
+      stream.getTracks().forEach(track=>track.stop());
+      proceedWithMic();
+    }).catch(err=>{
+      addMsg("b","❌ Microphone access denied! Please enable microphone in browser settings.","sy");
+      speak("Microphone access is required. Please check your browser permissions.");
+    });
+  } else {
+    // Fallback for browsers without getUserMedia
+    proceedWithMic();
+  }
+}
+
+function proceedWithMic(){
+  micOn=true;
+  document.getElementById("micBtn").className="mic-btn on";
+  document.getElementById("micBtn").innerHTML="🔴 &nbsp; STOP LISTENING";
+  document.getElementById("minfo").className="minfo on";
+  document.getElementById("minfo").textContent="MIC ON";
+
+  // FIRST TIME: greet + load voices on user interaction
+  if(!voicesLoaded) loadVoices();
+  speak("Hello! Smart Accident AI Assistant is ready. I am now listening. Speak clearly and I will respond.",()=>beginRec());
+}
+
+function beginRec(){
+  if(!micOn) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recog=new SR();
+  recog.lang="en-IN";
+  recog.continuous=false;
+  recog.interimResults=true;
+  recog.maxAlternatives=1;
+
+  recog.onstart=()=>{
+    setState("listening");
+    document.getElementById("tbox").className="tbox";
+    document.getElementById("tbox").textContent="Listening... speak now clearly!";
+  };
+
+  recog.onresult=(e)=>{
+    let interim="",final="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById("tbox").textContent=interim||final||"Listening...";
+    if(final.trim()) handleInput(final.trim());
+  };
+
+  recog.onerror=(e)=>{
+    if(e.error==="not-allowed"){
+      addMsg("b","❌ Microphone blocked! In Chrome: click the lock icon in address bar → Allow microphone → Reload page.","sy");
+      stopMic(); return;
+    }
+    if(e.error==="no-speech"){
+      document.getElementById("tbox").textContent="No speech heard. Speak louder and clearly...";
+    }
+    if(micOn&&!speaking) schedRec(1500);
+  };
+
+  recog.onend=()=>{
+    if(micOn&&!speaking) schedRec(700);
+  };
+
+  try{recog.start();}catch(e){if(micOn&&!speaking) schedRec(1200);}
+}
+
+function schedRec(d=800){
+  clearTimeout(restartT);
+  restartT=setTimeout(()=>{if(micOn&&!speaking) beginRec();},d);
+}
+
+function stopMic(){
+  micOn=false;
+  clearTimeout(restartT);
+  if(recog){try{recog.stop();}catch(e){} recog=null;}
+  setState("idle");
+  document.getElementById("micBtn").className="mic-btn";
+  document.getElementById("micBtn").innerHTML="🎤 &nbsp; START LISTENING";
+  document.getElementById("minfo").className="minfo";
+  document.getElementById("minfo").textContent="MIC OFF";
+  document.getElementById("tbox").textContent="Mic stopped. Click Start Listening to resume.";
+}
+
+// ── INPUT HANDLER ──
+function handleInput(txt){
+  clearTimeout(restartT);
+  if(recog){try{recog.stop();}catch(e){}}
+  addMsg("u",txt);
+  const lo=txt.toLowerCase();
+  const after=()=>{if(micOn) schedRec(600);};
+
+  if(["emergency","accident","crash","help me","help","mayday"].some(w=>lo.includes(w))){ doEmergency(after); return; }
+  if(["cancel","stop","false alarm","abort","option two"].some(w=>lo.includes(w))&&emergency){ doCancel(after); return; }
+  if(["option one","call ambulance","108","ambulance"].some(w=>lo.includes(w))){ doCall108(after); return; }
+  if(["where","location","address","gps","where are we"].some(w=>lo.includes(w))){ doLocation(after); return; }
+  if(["injured","bleeding","pain","hurt","i am injured","broken","i'm injured"].some(w=>lo.includes(w))){ doInjured(after); return; }
+  askAI(txt,after);
+}
+
+// ── BUTTON ACTIONS ──
+function act(type){
+  clearTimeout(restartT);
+  if(recog){try{recog.stop();}catch(e){}}
+  const after=()=>{if(micOn) schedRec(600);};
+  if(type==="emergency") doEmergency(after);
+  else if(type==="cancel") doCancel(after);
+  else if(type==="location") doLocation(after);
+  else if(type==="injured") doInjured(after);
+}
+
+// ── EMERGENCY ──
+function doEmergency(cb){
+  emergency=true;
+  document.getElementById("flash").className="flash on";
+  setState("emergency");
+  document.getElementById("tbox").className="tbox emergency";
+  addMsg("b","🚨 ACCIDENT DETECTED! Say 'cancel' to abort OR say 'option one' to call 108. Auto-calling in 10 seconds...","em");
+  speak("Warning! Accident detected. Say cancel now to abort. Or say option one to confirm the emergency call to 108. You have ten seconds.",()=>{
+    autoCallT=setTimeout(()=>{if(emergency) doCall108(cb);},9000);
+    if(cb) cb();
+  });
+}
+
+function doCancel(cb){
+  emergency=false;
+  clearTimeout(autoCallT);
+  document.getElementById("flash").className="flash";
+  const res=rnd(CAN);
+  addMsg("b",res,"ok");
+  speak(res.replace("✅ ",""),cb);
+}
+
+function doLocation(cb){
+  const res=rnd(LOC).replace("LOC",locStr);
+  addMsg("b",res);
+  speak("Your location is "+locStr+". "+rnd(["This has been sent to emergency dispatch.","Emergency responders can navigate here.","Stay at this position until help arrives."]),cb);
+}
+
+function doInjured(cb){
+  const res=rnd(INJ);
+  addMsg("b",res.t,"em");
+  speak(res.s,cb);
+}
+
+function doCall108(cb){
+  emergency=false;
+  clearTimeout(autoCallT);
+  document.getElementById("flash").className="flash";
+  addMsg("b","📞 Calling 108 Emergency Services now...","em");
+  const script=[
+    "Hello. This is an automated emergency alert from a Smart Accident Detection System.",
+    "A road traffic accident has been detected.",
+    "The accident location is: "+locStr+".",
+    "Vehicle sensors have confirmed a collision event.",
+    "Immediate medical assistance is required. Please dispatch an ambulance now.",
+    "Repeating: accident at "+locStr+". Please send help immediately."
+  ];
+  addMsg("b","📋 Speaking to 108 operator:\n"+script.map((s,i)=>`${i+1}. ${s}`).join("\n"));
+  let i=0;
+  function next(){
+    if(i<script.length) speak(script[i],()=>{i++;next();});
+    else speak("Emergency information transmitted. Help is on the way. Please stay calm.",()=>{
+      addMsg("b","✅ Emergency call complete. Help is on the way. Stay calm.","ok");
+      if(cb) cb();
+    });
+  }
+  speak("Emergency call to 108 is now active.",next);
+}
+
+// ── GROQ AI ──
+async function askAI(q,cb){
+  const el=addMsg("b","...");
+  try{
+    const res=await fetch(GROQ_URL,{
+      method:"POST",
+      headers:{"Authorization":"Bearer "+GROQ_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"llama-3.1-8b-instant",
+        max_tokens:100,
+        messages:[
+          {role:"system",content:"You are a calm, confident male voice assistant in a Smart Accident Detection vehicle. Answer in 1 to 2 short clear sentences only. Be reassuring. No bullet points. No markdown. No special characters."},
+          {role:"user",content:q}
+        ]
+      })
+    });
+    const d=await res.json();
+    const ans=d.choices?.[0]?.message?.content?.trim()||"I am here to help. Please stay calm.";
+    el.querySelector(".mbub").textContent=ans;
+    speak(ans,cb);
+  }catch(e){
+    el.querySelector(".mbub").textContent="Connection error. Check your internet.";
+    if(cb) cb();
+  }
+}
+
+// ── CHAT ──
+function addMsg(side,text,cls=""){
+  const c=document.getElementById("msgs");
+  const d=document.createElement("div");
+  d.className="msg "+(side==="u"?"u":"b")+" "+(cls||"");
+  const t=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  d.innerHTML=`<div class="mwho">${side==="u"?"YOU":"ASSISTANT"}</div><div class="mbub">${text.replace(/\n/g,"<br>")}</div><div class="mt">${t}</div>`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+  return d;
+}
+
+function sendTyped(){
+  const inp=document.getElementById("inp");
+  const v=inp.value.trim(); if(!v) return;
+  inp.value="";
+  // Make sure voices are loaded on user click
+  if(!voicesLoaded) loadVoices();
+  handleInput(v);
+}
+
+// ── LOCATION ──
+async function getAddr(lat,lon){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+    const d=await r.json();
+    const a=d.address||{};
+    return [a.road||a.pedestrian||a.street||"",a.suburb||a.neighbourhood||"",a.city||a.town||a.village||"",a.state||"",a.country||""].filter(Boolean).join(", ");
+  }catch(e){ return null; }
+}
+
+navigator.geolocation.getCurrentPosition(async pos=>{
+  const lat=pos.coords.latitude.toFixed(5);
+  const lon=pos.coords.longitude.toFixed(5);
+  const addr=await getAddr(lat,lon);
+  locStr=addr||`${lat}° N, ${lon}° E`;
+  document.getElementById("locTxt").textContent=locStr;
+  addMsg("b","📍 Location detected: "+locStr,"sy");
+},()=>{
+  document.getElementById("locTxt").textContent=locStr;
+  addMsg("b","📍 Using default location: "+locStr,"sy");
+});
+
+// ── BOOT MESSAGE (no audio — just text) ──
+window.onload=()=>{
+  addMsg("b","Hello! I am your Smart Accident AI Assistant. 👆 Click START LISTENING above to begin voice mode. You can also type below. Buttons on the left work anytime!");
+};
+</script>
+</body>
+</html>
