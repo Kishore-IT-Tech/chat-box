@@ -20,11 +20,16 @@ import requests
 import time
 import sys
 import threading
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ─────────────────────────────────────────
 #  SETTINGS
 # ─────────────────────────────────────────
-GROQ_API_KEY = ""  # Add your Groq API key here
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 LANGUAGE     = "en-IN"
 GPS_LOCATION = "13.0827 N, 80.2707 E, Chennai, Tamil Nadu"
 

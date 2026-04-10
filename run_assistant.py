@@ -7,8 +7,12 @@ import os
 import requests
 import subprocess
 from vosk import Model, KaldiRecognizer
+from dotenv import load_dotenv
 
-GROQ_API_KEY = ""  # Add your Groq API key here
+# Load environment variables from .env file
+load_dotenv()
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 MODEL_PATH   = "vosk-model-small-en-us-0.15"
 SAMPLE_RATE  = 16000
 

@@ -26,11 +26,15 @@ import sys
 import os
 import requests
 from vosk import Model, KaldiRecognizer
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ─────────────────────────────────────────
 #  YOUR SETTINGS — Only edit this part
 # ─────────────────────────────────────────
-GROQ_API_KEY = ""  # ← Paste your Groq API key here
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 MODEL_PATH   = "vosk-model-small-en-us-0.15"
 SAMPLE_RATE  = 16000
 
